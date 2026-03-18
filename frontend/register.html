@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>스마트 요양 모니터링 — 회원가입</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .tab-group {
+      display: flex;
+      gap: 0;
+      margin-bottom: 24px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid #ddd;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      background: white;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #888;
+    }
+
+    .tab-btn.active {
+      background: #2c3e50;
+      color: white;
+      font-weight: 600;
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .hospital-code-box {
+      margin-top: 20px;
+      padding: 16px;
+      background: #e8f5e9;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .hospital-code-box .code {
+      font-size: 24px;
+      font-weight: 700;
+      color: #27ae60;
+      letter-spacing: 2px;
+      margin: 8px 0;
+    }
+
+    .hospital-code-box .desc {
+      font-size: 12px;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+
+<div class="login-wrap">
+  <div class="login-box" style="width: 420px; max-width: 95vw">
+
+    <div class="login-title">회원가입</div>
+    <div class="login-sub">역할을 선택하고 가입해요</div>
+
+    <!-- 탭 -->
+    <div class="tab-group">
+      <button class="tab-btn active" onclick="switchTab('hospital')">병원 관리자</button>
+      <button class="tab-btn"        onclick="switchTab('nurse')">요양사</button>
+      <button class="tab-btn"        onclick="switchTab('camera')">병실 카메라</button>
+    </div>
+
+    <!-- 병원 관리자 가입 -->
+    <div class="tab-content active" id="tab-hospital">
+      <div class="form-row">
+        <input class="form-input" type="text" id="h-name" placeholder="병원 이름">
+      </div>
+      <div class="form-row">
+        <input class="form-input" type="text" id="h-username" placeholder="관리자 아이디">
+      </div>
+      <div class="form-row">
+        <input class="form-input" type="password" id="h-password" placeholder="비밀번호">
+      </div>
+      <div class="form-row">
+        <input class="form-input" type="email" id="h-email" placeholder="이메일">
+      </div>
+      <div class="login-error" id="h-error"></div>
+      <button class="btn btn-primary btn-full" onclick="registerHospital()">
+        병원 등록하기
+      </button>
+
+      <!-- 병원 코드 표시 -->
+      <div class="hospital-code-box" id="h-code-box" style="display:none">
+        <div style="font-size:13px;font-weight:600;color:#2c3e50">병원 코드 발급 완료!</div>
+        <div class="code" id="h-code"></div>
+        <div class="desc">요양사와 병실 카메라 등록 시 이 코드가 필요해요.<br>꼭 저장해두세요!</div>
+      </div>
+    </div>
+
+    <!-- 요양사 가입 -->
+    <div class="tab-content" id="tab-nurse">
+      <div class="form-row">
+        <input class="form-input" type="text" id="n-code" placeholder="병원 코드 (예: HOSP-XXXXXX)">
+      </div>
+      <div class="form-row">
+        <input class="form-input" type="text" id="n-username" placeholder="아이디">
+      </div>
+      <div class="form-row">
+        <input class="form-input" type="password" id="n-password" placeholder="비밀번호">
+      </div>
+      <div class="form-row">
+        <input class="form-input" type="email" id="n-email" placeholder="이메일">
+      </div>
+      <div class="login-error" id="n-error"></div>
+      <button class="btn btn-primary btn-full" onclick="registerNurse()">
+        요양사 가입하기
+      </button>
+    </div>
+
+    <!-- 병실 카메라 등록 -->
+    <div class="tab-content" id="tab-camera">
+      <div class="form-row">
+        <input class="form-input" type="text" id="c-code" placeholder="병원 코드 (예: HOSP-XXXXXX)">
+      </div>
+      <div class="form-row">
+        <input class="form-input" type="text" id="c-room" placeholder="병실 번호 (예: 101호)">
+      </div>
+      <div class="form-row">
+        <input class="form-input" type="password" id="c-password" placeholder="비밀번호">
+      </div>
+      <div class="login-error" id="c-error"></div>
+      <button class="btn btn-primary btn-full" onclick="registerCamera()">
+        카메라 등록하기
+      </button>
+    </div>
+
+    <!-- 로그인으로 이동 -->
+    <div style="text-align:center; margin-top:20px">
+      <a href="index.html" style="font-size:13px;color:#888">
+        이미 계정이 있나요? 로그인
+      </a>
+    </div>
+
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+      btn.classList.toggle('active', ['hospital','nurse','camera'][i] === tab);
+    });
+    document.querySelectorAll('.tab-content').forEach(el => {
+      el.classList.remove('active');
+    });
+    document.getElementById(`tab-${tab}`).classList.add('active');
+  }
+
+  async function registerHospital() {
+    const name     = document.getElementById('h-name').value.trim();
+    const username = document.getElementById('h-username').value.trim();
+    const password = document.getElementById('h-password').value.trim();
+    const email    = document.getElementById('h-email').value.trim();
+    const errorEl  = document.getElementById('h-error');
+
+    if (!name || !username || !password) {
+      errorEl.textContent = '병원 이름, 아이디, 비밀번호는 필수예요';
+      return;
+    }
+
+    try {
+      const res = await fetch(`${SERVER}/register/hospital`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ name, username, password, email })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail);
+
+      // 병원 코드 표시
+      document.getElementById('h-code').textContent     = data.hospital_code;
+      document.getElementById('h-code-box').style.display = 'block';
+      errorEl.textContent = '';
+
+    } catch (err) {
+      errorEl.textContent = err.message;
+    }
+  }
+
+  async function registerNurse() {
+    const hospital_code = document.getElementById('n-code').value.trim();
+    const username      = document.getElementById('n-username').value.trim();
+    const password      = document.getElementById('n-password').value.trim();
+    const email         = document.getElementById('n-email').value.trim();
+    const errorEl       = document.getElementById('n-error');
+
+    if (!hospital_code || !username || !password) {
+      errorEl.textContent = '병원 코드, 아이디, 비밀번호는 필수예요';
+      return;
+    }
+
+    try {
+      const res = await fetch(`${SERVER}/register/nurse`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ hospital_code, username, password, email })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail);
+
+      alert('✅ 요양사 가입 완료! 로그인해주세요.');
+      window.location.href = 'index.html';
+
+    } catch (err) {
+      errorEl.textContent = err.message;
+    }
+  }
+
+  async function registerCamera() {
+    const hospital_code = document.getElementById('c-code').value.trim();
+    const room          = document.getElementById('c-room').value.trim();
+    const password      = document.getElementById('c-password').value.trim();
+    const errorEl       = document.getElementById('c-error');
+
+    if (!hospital_code || !room || !password) {
+      errorEl.textContent = '병원 코드, 병실 번호, 비밀번호는 필수예요';
+      return;
+    }
+
+    try {
+      const res = await fetch(`${SERVER}/register/camera`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ hospital_code, room, password })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail);
+
+      alert(`✅ 병실 카메라 등록 완료!\n카메라 ID: ${data.camera_id}`);
+      window.location.href = 'index.html';
+
+    } catch (err) {
+      errorEl.textContent = err.message;
+    }
+  }
+</script>
+
+</body>
+</html>

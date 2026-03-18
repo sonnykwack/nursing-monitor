@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>스마트 요양 모니터링 — 대시보드</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header>
+  <h1>스마트 요양 모니터링</h1>
+  <span id="status">● 서버 연결 중...</span>
+</header>
+
+<nav>
+  <a href="dashboard.html" class="active">대시보드</a>
+  <a href="users.html" id="nav-users" style="display:none">사용자 관리</a>
+  <a href="#" onclick="logout()">로그아웃</a>
+</nav>
+
+<div class="container">
+
+  <!-- 요약 카드 -->
+  <div class="summary" style="margin-top:24px">
+    <div class="card danger">
+      <div class="number" id="fall-count">0</div>
+      <div class="label">낙상 감지</div>
+    </div>
+    <div class="card warning">
+      <div class="number" id="sos-count">0</div>
+      <div class="label">음성 SOS</div>
+    </div>
+    <div class="card safe">
+      <div class="number" id="total-count">0</div>
+      <div class="label">전체 이벤트</div>
+    </div>
+  </div>
+
+  <!-- 이벤트 목록 -->
+  <div class="section-title">최근 이벤트</div>
+  <div class="list-box" id="event-list">
+    <div class="empty">이벤트가 없습니다</div>
+  </div>
+
+  <!-- 리포트 섹션 -->
+  <div class="section-title" style="margin-top:32px">주간 리포트</div>
+  <div class="list-box" id="report-list">
+    <div class="empty">리포트가 없습니다</div>
+  </div>
+  <button
+    id="report-generate-btn"
+    class="btn btn-success btn-full"
+    style="display:none"
+    onclick="generateReport()"
+  >
+    + 지금 리포트 생성
+  </button>
+
+  <!-- 설정 섹션 (관리자 전용) -->
+  <div id="settings-section" style="display:none">
+    <div class="section-title" style="margin-top:32px">리포트 자동 생성 설정</div>
+    <div class="form-box">
+
+      <div class="form-row">
+        <span class="form-label">생성 주기</span>
+        <div style="display:flex;gap:16px">
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+            <input type="radio" name="interval" value="daily"> 매일
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+            <input type="radio" name="interval" value="weekly" checked> 매주
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+            <input type="radio" name="interval" value="monthly"> 매월
+          </label>
+        </div>
+      </div>
+
+      <div class="form-row" id="day-row">
+        <span class="form-label">요일</span>
+        <select class="form-select" id="report-day">
+          <option value="monday">월요일</option>
+          <option value="tuesday">화요일</option>
+          <option value="wednesday">수요일</option>
+          <option value="thursday">목요일</option>
+          <option value="friday">금요일</option>
+          <option value="saturday">토요일</option>
+          <option value="sunday">일요일</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <span class="form-label">생성 시각</span>
+        <input type="time" class="form-input" id="report-time" value="09:00">
+      </div>
+
+      <div class="form-row">
+        <button class="btn btn-primary" onclick="saveSettings()">저장</button>
+        <span class="save-msg" id="save-msg">✅ 저장됐어요!</span>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/dashboard.js"></script>
+</body>
+</html>

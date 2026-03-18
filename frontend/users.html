@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>스마트 요양 모니터링 — 사용자 관리</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header>
+  <h1>스마트 요양 모니터링</h1>
+  <span id="status">● 서버 연결 중...</span>
+</header>
+
+<nav>
+  <a href="dashboard.html">대시보드</a>
+  <a href="users.html" class="active">사용자 관리</a>
+  <a href="#" onclick="logout()">로그아웃</a>
+</nav>
+
+<div class="container">
+
+  <!-- 사용자 목록 -->
+  <div class="section-title" style="margin-top:24px">사용자 목록</div>
+  <div class="list-box" id="user-list">
+    <div class="empty">사용자가 없습니다</div>
+  </div>
+
+  <!-- 사용자 추가 -->
+  <div class="section-title" style="margin-top:32px">새 사용자 추가</div>
+  <div class="form-box">
+
+    <div class="form-row">
+      <span class="form-label">아이디</span>
+      <input class="form-input" type="text" id="new-username" placeholder="아이디 입력">
+    </div>
+
+    <div class="form-row">
+      <span class="form-label">비밀번호</span>
+      <input class="form-input" type="password" id="new-password" placeholder="비밀번호 입력">
+    </div>
+
+    <div class="form-row">
+      <span class="form-label">권한</span>
+      <select class="form-select" id="new-role" onchange="toggleRoomInput()">
+        <option value="nurse">요양사</option>
+        <option value="admin">관리자</option>
+      </select>
+    </div>
+
+    <div class="form-row" id="room-row">
+      <span class="form-label">담당 병실</span>
+      <input
+        class="form-input"
+        type="text"
+        id="new-rooms"
+        placeholder="예: 101호,102호,103호"
+      >
+    </div>
+
+    <div class="form-row">
+      <span class="form-label">이메일</span>
+      <input class="form-input" type="email" id="new-email" placeholder="알림 수신 이메일">
+    </div>
+
+    <div class="form-row">
+      <button class="btn btn-success" onclick="createUser()">추가</button>
+      <span class="save-msg" id="save-msg">✅ 추가됐어요!</span>
+    </div>
+
+  </div>
+
+</div>
+
+<script src="js/api.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    checkAuth();
+    checkAdmin();
+    fetchUsers();
+  });
+
+  function logout() {
+    clearToken();
+    window.location.href = "index.html";
+  }
+
+  function toggleRoomInput() {
+    const role = document.getElementById("new-role").value;
+    document.getElementById("room-row").style.display =
+      role === "nurse" ? "flex" : "none";
+  }
+
+  async function fetchUsers() {
+    try {
+      const users = await apiGetUsers();
+      const list  = document.getElementById("user-list");
+
+      if (users.length === 0) {
+        list.innerHTML = '<div class="empty">사용자가 없습니다</div>';
+        return;
+      }
+
+      list.innerHTML = users.map(u => `
+        <div class="list-item">
+          <span class="badge ${u.role === 'admin' ? 'admin' : 'nurse'}">
+            ${u.role === 'admin' ? '관리자' : '요양사'}
+          </span>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:600">${u.username}</div>
+            <div style="font-size:12px;color:#888;margin-top:2px">
+              담당: ${u.rooms || '없음'} · ${u.email || '이메일 없음'}
+            </div>
+          </div>
+          ${u.username !== 'admin' ? `
+            <button class="btn btn-danger" onclick="deleteUser(${u.id})">
+              삭제
+            </button>
+          ` : ''}
+        </div>
+      `).join("");
+
+    } catch (err) {
+      console.error("사용자 불러오기 실패:", err);
+    }
+  }
+
+  async function createUser() {
+    const username = document.getElementById("new-username").value.trim();
+    const password = document.getElementById("new-password").value.trim();
+    const role     = document.getElementById("new-role").value;
+    const rooms    = document.getElementById("new-rooms").value.trim();
+    const email    = document.getElementById("new-email").value.trim();
+
+    if (!username || !password) {
+      alert("아이디와 비밀번호는 필수예요!");
+      return;
+    }
+
+    try {
+      await apiCreateUser({ username, password, role, rooms, email });
+
+      // 입력 초기화
+      document.getElementById("new-username").value = "";
+      document.getElementById("new-password").value = "";
+      document.getElementById("new-rooms").value    = "";
+      document.getElementById("new-email").value    = "";
+
+      const msg = document.getElementById("save-msg");
+      msg.classList.add("show");
+      setTimeout(() => msg.classList.remove("show"), 2000);
+
+      fetchUsers();
+
+    } catch (err) {
+      alert("❌ 추가 실패 — 이미 존재하는 아이디일 수 있어요");
+    }
+  }
+
+  async function deleteUser(id) {
+    if (!confirm("정말 삭제할까요?")) return;
+    try {
+      await apiDeleteUser(id);
+      fetchUsers();
+    } catch (err) {
+      alert("❌ 삭제 실패");
+    }
+  }
+</script>
+</body>
+</html>

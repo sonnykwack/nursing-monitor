@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>스마트 요양 모니터링 — 로그인</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="login-wrap">
+  <div class="login-box">
+    <div class="login-title">스마트 요양 모니터링</div>
+    <div class="login-sub">계정으로 로그인하세요</div>
+
+    <div class="form-row">
+      <input
+        class="form-input"
+        type="text"
+        id="username"
+        placeholder="아이디"
+        autocomplete="username"
+      >
+    </div>
+    <div class="form-row">
+      <input
+        class="form-input"
+        type="password"
+        id="password"
+        placeholder="비밀번호"
+        autocomplete="current-password"
+      >
+    </div>
+
+    <div class="login-error" id="login-error"></div>
+
+    <button class="btn btn-primary btn-full" onclick="login()">
+      로그인
+    </button>
+
+    <div style="text-align:center; margin-top:16px">
+      <a href="register.html" style="font-size:13px;color:#888">
+        처음이신가요? 회원가입
+      </a>
+    </div>
+
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+</body>
+</html>

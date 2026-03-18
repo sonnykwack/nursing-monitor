@@ -1,0 +1,236 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, sans-serif;
+  background: #f0f2f5;
+  color: #333;
+}
+
+/* 헤더 */
+header {
+  background: #2c3e50;
+  color: white;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+header h1 { font-size: 18px; }
+
+#status {
+  font-size: 13px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: #27ae60;
+}
+
+/* 컨테이너 */
+.container { max-width: 900px; margin: 24px auto; padding: 0 16px; }
+
+/* 카드 */
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+ff
+/* 섹션 타이틀 */
+.section-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #555;
+}
+
+/* 리스트 공통 */
+.list-box {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  overflow: hidden;
+}
+
+.list-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+  animation: fadeIn 0.3s ease;
+}
+
+.list-item:last-child { border-bottom: none; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.empty {
+  text-align: center;
+  padding: 40px;
+  color: #aaa;
+  font-size: 14px;
+}
+
+/* 배지 */
+.badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.badge.fall    { background: #fdecea; color: #e74c3c; }
+.badge.sos     { background: #fff3e0; color: #f39c12; }
+.badge.default { background: #e8f5e9; color: #27ae60; }
+.badge.admin   { background: #eef2ff; color: #534AB7; }
+.badge.nurse   { background: #e1f5ee; color: #085041; }
+
+/* 버튼 */
+.btn {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn:hover { opacity: 0.85; }
+.btn-primary { background: #2c3e50; color: white; }
+.btn-success { background: #27ae60; color: white; }
+.btn-danger  { background: #e74c3c; color: white; }
+.btn-full    { width: 100%; padding: 12px; font-size: 14px; margin-top: 16px; }
+
+/* 입력 폼 */
+.form-box {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  padding: 24px;
+}
+
+.form-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.form-row:last-child { margin-bottom: 0; }
+
+.form-label {
+  font-size: 13px;
+  color: #555;
+  width: 100px;
+  flex-shrink: 0;
+}
+
+.form-input,
+.form-select {
+  font-size: 13px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  outline: none;
+  flex: 1;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus,
+.form-select:focus { border-color: #2c3e50; }
+
+/* 로그인 화면 */
+.login-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0f2f5;
+}
+
+.login-box {
+  background: white;
+  border-radius: 16px;
+  padding: 40px;
+  width: 360px;
+  max-width: 95vw;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+}
+
+.login-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 4px;
+}
+
+.login-sub {
+  font-size: 13px;
+  color: #aaa;
+  margin-bottom: 28px;
+}
+
+.login-error {
+  font-size: 12px;
+  color: #e74c3c;
+  margin-top: 8px;
+  min-height: 16px;
+}
+
+/* 저장 메시지 */
+.save-msg {
+  font-size: 12px;
+  color: #27ae60;
+  margin-left: 12px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.save-msg.show { opacity: 1; }
+
+/* 요약 카드 그리드 */
+.summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.summary .number {
+  font-size: 36px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.summary .label { font-size: 13px; color: #888; }
+.summary .card.danger .number  { color: #e74c3c; }
+.summary .card.warning .number { color: #f39c12; }
+.summary .card.safe .number    { color: #27ae60; }
+
+/* 네비게이션 */
+nav {
+  background: #34495e;
+  padding: 0 24px;
+  display: flex;
+  gap: 4px;
+}
+
+nav a {
+  color: #bdc3c7;
+  text-decoration: none;
+  font-size: 13px;
+  padding: 12px 16px;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+nav a:hover       { color: white; }
+nav a.active      { color: white; border-bottom-color: #27ae60; }

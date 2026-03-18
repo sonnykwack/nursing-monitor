@@ -1,0 +1,321 @@
+from fastapi import FastAPI, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from pydantic import BaseModel
+from datetime import datetime, timedelta
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+import sqlite3
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM  = "HS256"
+TOKEN_EXPIRE_MINUTES = 60 * 24  # 24시간
+
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+pwd_context   = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
+# ── DB 초기화 ────────────────────────────────
+def init_db():
+    conn   = sqlite3.connect("events.db")
+    cursor = conn.cursor()
+
+    # 이벤트 테이블
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS events (
+            id        INTEGER PRIMARY KEY AUTOINCREMENT,
+            room      TEXT NOT NULL,
+            type      TEXT NOT NULL,
+            message   TEXT NOT NULL,
+            timestamp TEXT NOT NULL
+        )
+    """)
+
+    # 사용자 테이블
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id       INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            role     TEXT NOT NULL DEFAULT 'nurse',
+            rooms    TEXT NOT NULL DEFAULT '',
+            email    TEXT NOT NULL DEFAULT ''
+        )
+    """)
+
+    # 설정 테이블
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS settings (
+            key   TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        )
+    """)
+
+    # 기본 관리자 계정 생성
+    cursor.execute("SELECT * FROM users WHERE username = 'admin'")
+    if not cursor.fetchone():
+        hashed = pwd_context.hash("admin1234")
+        cursor.execute(
+            "INSERT INTO users (username, password, role, rooms, email) VALUES (?, ?, ?, ?, ?)",
+            ("admin", hashed, "admin", "전체", "")
+        )
+        print("✅ 기본 관리자 계정 생성 (admin / admin1234)")
+
+    # 설정 기본값
+    defaults = [
+        ("report_interval", "weekly"),
+        ("report_time",     "09:00"),
+        ("report_day",      "monday"),
+    ]
+    for key, value in defaults:
+        cursor.execute(
+            "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)",
+            (key, value)
+        )
+
+    conn.commit()
+    conn.close()
+
+init_db()
+
+# ── JWT 토큰 ─────────────────────────────────
+def create_token(data: dict):
+    to_encode = data.copy()
+    expire    = datetime.utcnow() + timedelta(minutes=TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+def get_current_user(token: str = Depends(oauth2_scheme)):
+    try:
+        payload  = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username = payload.get("sub")
+        role     = payload.get("role")
+        rooms    = payload.get("rooms")
+        if username is None:
+            raise HTTPException(status_code=401, detail="인증 실패")
+        return {"username": username, "role": role, "rooms": rooms}
+    except JWTError:
+        raise HTTPException(status_code=401, detail="토큰 만료 또는 오류")
+
+def admin_only(user=Depends(get_current_user)):
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="관리자만 접근 가능")
+    return user
+
+# ── 로그인 API ───────────────────────────────
+@app.post("/login")
+def login(form: OAuth2PasswordRequestForm = Depends()):
+    conn   = sqlite3.connect("events.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE username = ?", (form.username,))
+    user = cursor.fetchone()
+    conn.close()
+
+    if not user or not pwd_context.verify(form.password, user[2]):
+        raise HTTPException(status_code=401, detail="아이디 또는 비밀번호가 틀렸어요")
+
+    token = create_token({
+        "sub":   user[1],
+        "role":  user[3],
+        "rooms": user[4]
+    })
+    return {"access_token": token, "token_type": "bearer", "role": user[3]}
+
+# ── 내 정보 조회 API ─────────────────────────
+@app.get("/me")
+def get_me(user=Depends(get_current_user)):
+    return user
+
+# ── 사용자 관리 API (관리자 전용) ────────────
+class UserCreate(BaseModel):
+    username: str
+    password: str
+    role:     str
+    rooms:    str
+    email:    str
+
+@app.get("/users")
+def get_users(user=Depends(admin_only)):
+    conn   = sqlite3.connect("events.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, username, role, rooms, email FROM users")
+    rows = cursor.fetchall()
+    conn.close()
+    return [
+        {"id": r[0], "username": r[1], "role": r[2],
+         "rooms": r[3], "email": r[4]}
+        for r in rows
+    ]
+
+@app.post("/users")
+def create_user(u: UserCreate, user=Depends(admin_only)):
+    hashed = pwd_context.hash(u.password)
+    try:
+        conn   = sqlite3.connect("events.db")
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO users (username, password, role, rooms, email) VALUES (?, ?, ?, ?, ?)",
+            (u.username, hashed, u.role, u.rooms, u.email)
+        )
+        conn.commit()
+        conn.close()
+        return {"status": "ok"}
+    except Exception:
+        raise HTTPException(status_code=400, detail="이미 존재하는 아이디예요")
+
+@app.delete("/users/{user_id}")
+def delete_user(user_id: int, user=Depends(admin_only)):
+    conn   = sqlite3.connect("events.db")
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+    return {"status": "ok"}
+
+# ── 이벤트 API ───────────────────────────────
+class Event(BaseModel):
+    room:    str
+    type:    str
+    message: str
+
+@app.post("/event")
+def create_event(event: Event):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn      = sqlite3.connect("events.db")
+    cursor    = conn.cursor()
+    cursor.execute(
+        "INSERT INTO events (room, type, message, timestamp) VALUES (?, ?, ?, ?)",
+        (event.room, event.type, event.message, timestamp)
+    )
+    conn.commit()
+    conn.close()
+    return {"status": "ok", "timestamp": timestamp}
+
+@app.get("/events")
+def get_events(user=Depends(get_current_user)):
+    conn   = sqlite3.connect("events.db")
+    cursor = conn.cursor()
+
+    # 관리자는 전체, 요양사는 담당 병실만
+    if user["role"] == "admin":
+        cursor.execute(
+            "SELECT * FROM events ORDER BY timestamp DESC LIMIT 50"
+        )
+    else:
+        rooms = user["rooms"].split(",")
+        placeholders = ",".join("?" * len(rooms))
+        cursor.execute(
+            f"SELECT * FROM events WHERE room IN ({placeholders}) ORDER BY timestamp DESC LIMIT 50",
+            rooms
+        )
+
+    rows = cursor.fetchall()
+    conn.close()
+    return [
+        {"id": r[0], "room": r[1], "type": r[2],
+         "message": r[3], "timestamp": r[4]}
+        for r in rows
+    ]
+
+# ── 리포트 API ───────────────────────────────
+@app.get("/reports")
+def get_reports(user=Depends(get_current_user)):
+    report_list = []
+    if os.path.exists("reports"):
+        for month in sorted(os.listdir("reports"), reverse=True):
+            month_path = f"reports/{month}"
+            if os.path.isdir(month_path):
+                for filename in sorted(os.listdir(month_path), reverse=True):
+                    if filename.endswith(".pdf"):
+                        report_list.append({
+                            "filename": filename,
+                            "month":    month,
+                            "path":     f"{month_path}/{filename}",
+                            "url":      f"/reports/download/{month}/{filename}"
+                        })
+    return report_list
+
+@app.get("/reports/download/{month}/{filename}")
+def download_report(month: str, filename: str, user=Depends(get_current_user)):
+    path = f"reports/{month}/{filename}"
+    if os.path.exists(path):
+        return FileResponse(
+            path,
+            media_type="application/pdf",
+            filename=filename
+        )
+    raise HTTPException(status_code=404, detail="파일을 찾을 수 없어요")
+
+@app.post("/reports/generate")
+def generate_report_now(user=Depends(admin_only)):
+    from utils.report import generate_report
+    filename = generate_report()
+    return {"status": "ok", "filename": filename}
+
+# ── 설정 API (관리자 전용) ───────────────────
+def init_settings():
+    conn   = sqlite3.connect("events.db")
+    cursor = conn.cursor()
+    defaults = [
+        ("report_interval", "weekly"),
+        ("report_time",     "09:00"),
+        ("report_day",      "monday"),
+    ]
+    for key, value in defaults:
+        cursor.execute(
+            "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)",
+            (key, value)
+        )
+    conn.commit()
+    conn.close()
+
+init_settings()
+
+@app.get("/settings")
+def get_settings(user=Depends(get_current_user)):
+    conn   = sqlite3.connect("events.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT key, value FROM settings")
+    rows = cursor.fetchall()
+    conn.close()
+    return {row[0]: row[1] for row in rows}
+
+class Settings(BaseModel):
+    report_interval: str
+    report_time:     str
+    report_day:      str
+
+@app.post("/settings")
+def save_settings(s: Settings, user=Depends(admin_only)):
+    conn   = sqlite3.connect("events.db")
+    cursor = conn.cursor()
+    for key, value in [
+        ("report_interval", s.report_interval),
+        ("report_time",     s.report_time),
+        ("report_day",      s.report_day),
+    ]:
+        cursor.execute(
+            "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+            (key, value)
+        )
+    conn.commit()
+    conn.close()
+    return {"status": "ok"}
+
+# ── 서버 상태 확인 ───────────────────────────
+@app.get("/")
+def health_check():
+    return {"status": "서버 정상 작동 중"}
